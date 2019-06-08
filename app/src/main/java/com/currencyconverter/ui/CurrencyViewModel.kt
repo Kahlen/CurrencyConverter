@@ -25,13 +25,13 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
 
     fun getRates() {
         loadingState.value = LoadingState.LOADING
-        subscribeToRemoteRate(CurrencyAmountModel(Currency.EUR, 100), 1)
+        subscribeToRemoteRate(0)
     }
 
-    private fun subscribeToRemoteRate(currencyAmountModel: CurrencyAmountModel, initialDelay: Long) {
+    private fun subscribeToRemoteRate(initialDelay: Long) {
         disposable = Observable.interval(initialDelay, 1, TimeUnit.SECONDS)
             .flatMap {
-                getRemoteRate(currencyAmountModel).subscribeOn(Schedulers.io())
+                getRemoteRate().subscribeOn(Schedulers.io())
             }
             .doOnNext { loadingState.postValue(LoadingState.REFRESHING) }
             .subscribeOn(Schedulers.io())
@@ -42,22 +42,24 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
             })
     }
 
-    private fun getRemoteRate(currencyAmountModel: CurrencyAmountModel): Observable<List<CurrencyItemModel>> {
-        return repository.getAmounts(currencyAmountModel.currency, currencyAmountModel.amount).subscribeOn(Schedulers.io())
+    private fun getRemoteRate(): Observable<List<CurrencyItemModel>> {
+        val currency = getCurrentCurrency()
+        val amount = rates.value?.items?.get(0)?.amount ?: 100
+        return repository.getAmounts(currency, amount)
             .map { single ->
                 val oldRates = rates.value
                 oldRates?.items?.map { oldRate ->
                     oldRate.copy(amount = single[CURRENCY_MAP[oldRate.currencyCode]]!!)
                 } ?: mutableListOf(
                     CurrencyItemModel(
-                        currencyCode = currencyAmountModel.currency.code,
-                        currencyName = currencyAmountModel.currency.nameRes,
-                        amount = currencyAmountModel.amount,
-                        imageRes = currencyAmountModel.currency.flagRes,
+                        currencyCode = currency.code,
+                        currencyName = currency.nameRes,
+                        amount = amount,
+                        imageRes = currency.flagRes,
                         editable = true
                     )
                 ).apply {
-                    addAll(single.filter { it.key != currencyAmountModel.currency }
+                    addAll(single.filter { it.key != currency }
                         .map { (currency, amount) ->
                             CurrencyItemModel(
                                 currencyCode = currency.code,
@@ -69,6 +71,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
                         })
                 }
             }
+            .subscribeOn(Schedulers.io())
     }
 
     private fun getLocalRate(currencyAmountModel: CurrencyAmountModel): Completable {
@@ -101,7 +104,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
                 }}
                 .subscribeOn(Schedulers.io())
                 .subscribe {
-                    restartRemotePolling(rates.value?.items?.get(0)?.amount ?: 100)
+                    restartRemotePolling()
                 }
         }
     }
@@ -110,7 +113,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
         disposable?.dispose()
         getLocalRate(CurrencyAmountModel(getCurrentCurrency(), amount))
             .subscribe {
-                restartRemotePolling(amount)
+                restartRemotePolling()
             }
     }
 
@@ -119,8 +122,8 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
         disposable?.dispose()
     }
 
-    private fun restartRemotePolling(amount: Int) {
-        subscribeToRemoteRate(CurrencyAmountModel(getCurrentCurrency(), amount), 1)
+    private fun restartRemotePolling() {
+        subscribeToRemoteRate(1)
     }
 
     private fun getCurrentCurrency(): Currency {
