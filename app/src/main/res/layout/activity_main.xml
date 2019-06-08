@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <import type="android.view.View"/>
+        <import type="com.currencyconverter.ui.LoadingState"/>
+        <variable name="loadingState" type="com.currencyconverter.ui.LoadingState"/>
+    </data>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:context=".ui.MainActivity">
+
+            <ProgressBar
+                android:id="@+id/loading"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:indeterminate="true"
+                android:indeterminateTint="@android:color/holo_blue_light"
+                android:visibility="@{loadingState == LoadingState.LOADING ? View.VISIBLE : View.GONE}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:visibility="gone"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                android:text="@string/error_message"
+                android:visibility="@{loadingState == LoadingState.ERROR ? View.VISIBLE : View.GONE}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/currencies"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:focusableInTouchMode="true"
+                android:visibility="@{loadingState == LoadingState.REFRESHING ? View.VISIBLE : View.GONE}"
+                android:descendantFocusability="beforeDescendants"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
