@@ -80,7 +80,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
             rates.postValue(CurrencyUpdatedModel(if (base != null) {
                 rates.value?.items?.map { currencyItemModel ->
                     if (currencyItemModel.currencyCode == currencyAmountModel.currency.code) {
-                        currencyItemModel
+                        currencyItemModel.copy(amount = currencyAmountModel.amount)
                     } else {
                         currencyItemModel.copy(
                             amount = (currencyAmountModel.amount*repository.latestRate!![CURRENCY_MAP[currencyItemModel.currencyCode]]!!/base).toInt())

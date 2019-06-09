@@ -37,6 +37,10 @@ class CurrencyViewModelTest {
                 Currency.GBP to 200,
                 Currency.USD to 300)
         ))
+        whenever(repository.latestRate).thenReturn(
+            mapOf(Currency.EUR to 1.0,
+                Currency.GBP to 2.0,
+                Currency.USD to 3.0))
         viewModel = CurrencyViewModel(repository)
     }
 
@@ -66,6 +70,23 @@ class CurrencyViewModelTest {
                     CurrencyItemModel(Currency.EUR.code, Currency.EUR.nameRes, 100, Currency.EUR.flagRes, false),
                     CurrencyItemModel(Currency.USD.code, Currency.USD.nameRes, 300, Currency.USD.flagRes, false)),
                 itemBumpedFromIndex = 1),
+            viewModel.rates.value)
+    }
+
+
+    @Test
+    fun testOnAmountChanged() {
+        viewModel.getRates()
+        schedulers.computation.advanceTimeBy(1, TimeUnit.SECONDS)
+
+        viewModel.onAmountChanged(200)
+        // item at 0 and 1 swapped
+        assertEquals(
+            CurrencyUpdatedModel(
+                items = listOf(CurrencyItemModel(Currency.EUR.code, Currency.EUR.nameRes, 200, Currency.EUR.flagRes, true),
+                    CurrencyItemModel(Currency.GBP.code, Currency.GBP.nameRes, 400, Currency.GBP.flagRes, false),
+                    CurrencyItemModel(Currency.USD.code, Currency.USD.nameRes, 600, Currency.USD.flagRes, false)),
+                itemBumpedFromIndex = null),
             viewModel.rates.value)
     }
 
