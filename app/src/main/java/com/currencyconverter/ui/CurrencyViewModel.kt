@@ -2,15 +2,18 @@ package com.currencyconverter.ui
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.currencyconverter.repository.CurrencyConstants.CURRENCY_MAP
 import com.currencyconverter.repository.CurrencyRepository
 import com.currencyconverter.repository.data.Currency
 import com.currencyconverter.repository.data.CurrencyAmountModel
 import com.currencyconverter.ui.data.CurrencyItemModel
 import com.currencyconverter.ui.data.CurrencyUpdatedModel
 import com.currencyconverter.util.bumpToTop
+import com.currencyconverter.util.getCurrency
+import com.currencyconverter.util.toCurrencyAmountModel
+import com.currencyconverter.util.toCurrencyItemModel
 import io.reactivex.Completable
 import io.reactivex.Observable
+import io.reactivex.Single
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import java.util.concurrent.TimeUnit
@@ -43,53 +46,18 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
     }
 
     private fun getRemoteRate(): Observable<List<CurrencyItemModel>> {
-        val currency = getCurrentCurrency()
-        val amount = rates.value?.items?.get(0)?.amount ?: 100
-        return repository.getAmounts(currency, amount)
-            .map { single ->
-                val oldRates = rates.value
-                oldRates?.items?.map { oldRate ->
-                    oldRate.copy(amount = single[CURRENCY_MAP[oldRate.currencyCode]]!!)
-                } ?: mutableListOf(
-                    CurrencyItemModel(
-                        currencyCode = currency.code,
-                        currencyName = currency.nameRes,
-                        amount = amount,
-                        imageRes = currency.flagRes,
-                        editable = true
-                    )
-                ).apply {
-                    addAll(single.filter { it.key != currency }
-                        .map { (currency, amount) ->
-                            CurrencyItemModel(
-                                currencyCode = currency.code,
-                                currencyName = currency.nameRes,
-                                amount = amount,
-                                imageRes = currency.flagRes,
-                                editable = false
-                            )
-                        })
+        return repository.getRemoteRates(
+            rates.value?.items?.map { it.getCurrency() } ?: Currency.values().toList(),
+            rates.value?.items?.get(0)?.amount ?: 100)
+            .map { list ->
+                list.mapIndexed { index, currencyAmountModel ->
+                    currencyAmountModel.toCurrencyItemModel(index == 0)
                 }
             }
-            .subscribeOn(Schedulers.io())
     }
 
-    private fun getLocalRate(currencyAmountModel: CurrencyAmountModel): Completable {
-        return Completable.fromAction {
-            val base = repository.latestRate?.get(currencyAmountModel.currency)
-            rates.postValue(CurrencyUpdatedModel(if (base != null) {
-                rates.value?.items?.map { currencyItemModel ->
-                    if (currencyItemModel.currencyCode == currencyAmountModel.currency.code) {
-                        currencyItemModel.copy(amount = currencyAmountModel.amount)
-                    } else {
-                        currencyItemModel.copy(
-                            amount = (currencyAmountModel.amount*repository.latestRate!![CURRENCY_MAP[currencyItemModel.currencyCode]]!!/base).toInt())
-                    }
-                } ?: emptyList()
-            } else {
-                emptyList()
-            }))
-        }.subscribeOn(Schedulers.io())
+    private fun getLocalRate(amount: Int): Single<List<CurrencyAmountModel>> {
+        return repository.getLocalRates(rates.value!!.items.map { it.toCurrencyAmountModel() }, amount)
     }
 
     override fun onItemClicked(position: Int) {
@@ -111,8 +79,12 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
 
     override fun onAmountChanged(amount: Int) {
         disposable?.dispose()
-        getLocalRate(CurrencyAmountModel(getCurrentCurrency(), amount))
-            .subscribe {
+        getLocalRate(amount)
+            .subscribeOn(Schedulers.io())
+            .subscribe { model ->
+                rates.postValue(CurrencyUpdatedModel(model.mapIndexed { index, currencyAmountModel ->
+                    currencyAmountModel.toCurrencyItemModel(index == 0)
+                }))
                 restartRemotePolling()
             }
     }
@@ -124,9 +96,5 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
 
     private fun restartRemotePolling() {
         subscribeToRemoteRate(1)
-    }
-
-    private fun getCurrentCurrency(): Currency {
-        return rates.value?.items?.get(0)?.currencyCode?.let { CURRENCY_MAP[it] } ?: Currency.EUR
     }
 }

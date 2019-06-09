@@ -4,10 +4,12 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.currencyconverter.helper.RxTestRule
 import com.currencyconverter.repository.CurrencyRepository
 import com.currencyconverter.repository.data.Currency
+import com.currencyconverter.repository.data.CurrencyAmountModel
 import com.currencyconverter.ui.data.CurrencyItemModel
 import com.currencyconverter.ui.data.CurrencyUpdatedModel
 import com.nhaarman.mockitokotlin2.whenever
 import io.reactivex.Observable
+import io.reactivex.Single
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.ClassRule
@@ -16,7 +18,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
-import java.util.concurrent.TimeUnit
 
 @RunWith(MockitoJUnitRunner::class)
 class CurrencyViewModelTest {
@@ -32,22 +33,31 @@ class CurrencyViewModelTest {
 
     @Before
     fun setUp() {
-        whenever(repository.getAmounts(Currency.EUR, 100)).thenReturn(Observable.just(
-            mapOf(Currency.EUR to 100,
-                Currency.GBP to 200,
-                Currency.USD to 300)
-        ))
-        whenever(repository.latestRate).thenReturn(
-            mapOf(Currency.EUR to 1.0,
-                Currency.GBP to 2.0,
-                Currency.USD to 3.0))
+        whenever(repository.getRemoteRates(
+                Currency.values().toList(),
+                100))
+            .thenReturn(Observable.just(
+                listOf(
+                    CurrencyAmountModel(Currency.EUR, 100),
+                    CurrencyAmountModel(Currency.GBP, 200),
+                    CurrencyAmountModel(Currency.USD, 300))))
+        whenever(repository.getLocalRates(
+                listOf(
+                    CurrencyAmountModel(Currency.EUR, 100),
+                    CurrencyAmountModel(Currency.GBP, 200),
+                    CurrencyAmountModel(Currency.USD, 300)),
+                200)).thenReturn(
+                Single.just(listOf(
+                    CurrencyAmountModel(Currency.EUR, 200),
+                    CurrencyAmountModel(Currency.GBP, 400),
+                    CurrencyAmountModel(Currency.USD, 600))))
         viewModel = CurrencyViewModel(repository)
     }
 
     @Test
     fun getRates() {
         viewModel.getRates()
-        schedulers.computation.advanceTimeBy(1, TimeUnit.SECONDS)
+        schedulers.computation.triggerActions()
         assertEquals(
             CurrencyUpdatedModel(
                 items = listOf(CurrencyItemModel(Currency.EUR.code, Currency.EUR.nameRes, 100, Currency.EUR.flagRes, true),
@@ -60,7 +70,7 @@ class CurrencyViewModelTest {
     @Test
     fun testOnItemClick() {
         viewModel.getRates()
-        schedulers.computation.advanceTimeBy(1, TimeUnit.SECONDS)
+        schedulers.computation.triggerActions()
 
         viewModel.onItemClicked(1)
         // item at 0 and 1 swapped
@@ -77,7 +87,7 @@ class CurrencyViewModelTest {
     @Test
     fun testOnAmountChanged() {
         viewModel.getRates()
-        schedulers.computation.advanceTimeBy(1, TimeUnit.SECONDS)
+        schedulers.computation.triggerActions()
 
         viewModel.onAmountChanged(200)
         // item at 0 and 1 swapped
