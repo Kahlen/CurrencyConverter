@@ -9,7 +9,7 @@ import javax.inject.Inject
 class CurrencyRepository @Inject constructor(private val currencyApi: CurrencyApi) {
 
     @Volatile
-    var latestRate: Map<Currency, Double>? = null
+    private var latestRate: Map<Currency, Double>? = null
 
     fun getRemoteRates(currencies: List<Currency>, amount: Int): Observable<List<CurrencyAmountModel>> {
         return currencyApi.getLatest(currencies[0].code)
