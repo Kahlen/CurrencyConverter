@@ -49,7 +49,7 @@ class CurrencyViewModelTest {
                 items = listOf(CurrencyItemModel(Currency.EUR.code, Currency.EUR.nameRes, 100, Currency.EUR.flagRes, true),
                     CurrencyItemModel(Currency.GBP.code, Currency.GBP.nameRes, 200, Currency.GBP.flagRes, false),
                     CurrencyItemModel(Currency.USD.code, Currency.USD.nameRes, 300, Currency.USD.flagRes, false)),
-                updateFromRemote = true),
+                itemBumpedFromIndex = null),
             viewModel.rates.value)
     }
 
@@ -65,7 +65,7 @@ class CurrencyViewModelTest {
                 items = listOf(CurrencyItemModel(Currency.GBP.code, Currency.GBP.nameRes, 200, Currency.GBP.flagRes, true),
                     CurrencyItemModel(Currency.EUR.code, Currency.EUR.nameRes, 100, Currency.EUR.flagRes, false),
                     CurrencyItemModel(Currency.USD.code, Currency.USD.nameRes, 300, Currency.USD.flagRes, false)),
-                updateFromRemote = false),
+                itemBumpedFromIndex = 1),
             viewModel.rates.value)
     }
 

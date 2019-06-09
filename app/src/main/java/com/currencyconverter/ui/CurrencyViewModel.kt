@@ -36,7 +36,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
             .doOnNext { loadingState.postValue(LoadingState.REFRESHING) }
             .subscribeOn(Schedulers.io())
             .subscribe({
-                rates.postValue(CurrencyUpdatedModel(it, true))
+                rates.postValue(CurrencyUpdatedModel(it))
             }, {
                 loadingState.postValue(LoadingState.ERROR)
             })
@@ -88,7 +88,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
                 } ?: emptyList()
             } else {
                 emptyList()
-            }, true))
+            }))
         }.subscribeOn(Schedulers.io())
     }
 
@@ -100,7 +100,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
                     this[0] = this[0].copy(editable = false)
                     this[position] = this[position].copy(editable = true)
                 }?.bumpToTop(position)?.let {
-                    rates.postValue(CurrencyUpdatedModel(it, false))
+                    rates.postValue(CurrencyUpdatedModel(it, position))
                 }}
                 .subscribeOn(Schedulers.io())
                 .subscribe {

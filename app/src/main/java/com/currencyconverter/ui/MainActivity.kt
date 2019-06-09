@@ -1,6 +1,7 @@
 package com.currencyconverter.ui
 
 import android.os.Bundle
+import android.view.ViewTreeObserver
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
@@ -42,6 +43,15 @@ class MainActivity : AppCompatActivity() {
             it.adapter = adapter
             it.layoutManager = layoutManager
         }
+        val treeObserver = object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                layoutManager.findViewByPosition(0)?.let {
+                    layoutManager.findViewByPosition(0)?.viewTreeObserver?.removeOnGlobalLayoutListener(this)
+                    (bindingView.currencies.getChildViewHolder(it) as CurrencyViewHolder).focusInputView()
+                }
+            }
+
+        }
         val adapterObserver = object: RecyclerView.AdapterDataObserver() {
             override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
                 super.onItemRangeMoved(fromPosition, toPosition, itemCount)
@@ -49,10 +59,10 @@ class MainActivity : AppCompatActivity() {
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
         }
-        viewModel.rates.observe(this, Observer {
-            adapter.submitList(it.items)
-            if (!it.updateFromRemote) {
-                // scroll to top if the update is not from remote
+        viewModel.rates.observe(this, Observer { model ->
+            adapter.submitList(model.items)
+            model.itemBumpedFromIndex?.let {
+                layoutManager.findViewByPosition(it)?.viewTreeObserver?.addOnGlobalLayoutListener(treeObserver)
                 adapter.registerAdapterDataObserver(adapterObserver)
             }
         })

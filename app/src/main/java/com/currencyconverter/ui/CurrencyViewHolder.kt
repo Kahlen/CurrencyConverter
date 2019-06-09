@@ -19,12 +19,7 @@ class CurrencyViewHolder(
     init {
         bindingView.root.setOnClickListener { _ ->
             interactionListener.onItemClicked(adapterPosition)
-            bindingView.root.post {
-                if (bindingView.currencyInput.requestFocus()) {
-                    val inputMethodManager = bindingView.currencyInput.context.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                    inputMethodManager.showSoftInput(bindingView.currencyInput, InputMethodManager.SHOW_IMPLICIT)
-                }
-            }
+            focusInputView()
         }
 
         textWatcher = object: TextWatcher {
@@ -73,6 +68,16 @@ class CurrencyViewHolder(
                 if (bindingView.currencyInput.selectionStart == bindingView.currencyInput.selectionEnd) {
                     bindingView.currencyInput.setSelection(bindingView.currencyInput.text?.length ?: 0)
                 }
+            }
+        }
+    }
+
+    fun focusInputView() {
+        if (bindingView.currencyInput.requestFocus()) {
+            val inputMethodManager = bindingView.currencyInput.context.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            inputMethodManager.showSoftInput(bindingView.currencyInput, InputMethodManager.SHOW_IMPLICIT)
+            bindingView.currencyInput.post {
+                bindingView.currencyInput.selectAll()
             }
         }
     }
