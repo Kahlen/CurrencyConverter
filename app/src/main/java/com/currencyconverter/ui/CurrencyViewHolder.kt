@@ -41,8 +41,10 @@ class CurrencyViewHolder(
 
                 if (oldText != newText) {
                     bindingView.currencyInput.removeTextChangedListener(textWatcher)
-                    bindingView.currencyInput.setText(newText)
-                    bindingView.currencyInput.setSelection(bindingView.currencyInput.text?.length ?: 0)
+                    if (newText != currentText) {
+                        bindingView.currencyInput.setText(newText)
+                        bindingView.currencyInput.setSelection(bindingView.currencyInput.text?.length ?: 0)
+                    }
                     interactionListener.onAmountChanged(newText.toInt())
                     oldText = newText
                     bindingView.currencyInput.addTextChangedListener(textWatcher)
