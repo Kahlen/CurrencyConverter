@@ -4,7 +4,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.currencyconverter.repository.CurrencyRepository
 import com.currencyconverter.repository.data.Currency
-import com.currencyconverter.repository.data.CurrencyAmountModel
 import com.currencyconverter.ui.data.CurrencyItemModel
 import com.currencyconverter.ui.data.CurrencyUpdatedModel
 import com.currencyconverter.util.bumpToTop
@@ -36,10 +35,11 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
             .flatMap {
                 getRemoteRate().subscribeOn(Schedulers.io())
             }
+            .map { CurrencyUpdatedModel(it) }
             .doOnNext { loadingState.postValue(LoadingState.REFRESHING) }
             .subscribeOn(Schedulers.io())
             .subscribe({
-                rates.postValue(CurrencyUpdatedModel(it))
+                rates.postValue(it)
             }, {
                 loadingState.postValue(LoadingState.ERROR)
             })
@@ -56,8 +56,13 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
             }
     }
 
-    private fun getLocalRate(amount: Int): Single<List<CurrencyAmountModel>> {
+    private fun getLocalRate(amount: Int): Single<CurrencyUpdatedModel> {
         return repository.getLocalRates(rates.value!!.items.map { it.toCurrencyAmountModel() }, amount)
+            .map { model ->
+                CurrencyUpdatedModel(model.mapIndexed { index, currencyAmountModel ->
+                    currencyAmountModel.toCurrencyItemModel(index == 0)
+                })
+            }
     }
 
     override fun onItemClicked(position: Int) {
@@ -82,9 +87,7 @@ class CurrencyViewModel(private val repository: CurrencyRepository)
         getLocalRate(amount)
             .subscribeOn(Schedulers.io())
             .subscribe { model ->
-                rates.postValue(CurrencyUpdatedModel(model.mapIndexed { index, currencyAmountModel ->
-                    currencyAmountModel.toCurrencyItemModel(index == 0)
-                }))
+                rates.postValue(model)
                 restartRemotePolling()
             }
     }
